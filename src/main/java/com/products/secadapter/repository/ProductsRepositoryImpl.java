@@ -7,10 +7,9 @@ import com.products.application.ports.secondary.ProductsRepository;
 import com.products.secadapter.mapper.rowmapper.ProductsRowMapper;
 import com.products.secadapter.mapper.rowmapper.ProductsSecMapper;
 import com.products.secadapter.model.ProductEntity;
-import java.text.MessageFormat;
-import java.util.List;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -23,7 +22,7 @@ public class ProductsRepositoryImpl implements ProductsRepository {
 
   private final @NonNull ProductsSecMapper productsSecMapper;
 
-  private static final String QUERY_SELECT_TOP_REFERENCE_MAIN = """
+  private static final String QUERY_SELECT_HIGHEST_PRIORITY_PRODUCT_BY_FILTERS = """
       SELECT 
           BRAND_ID as brandId, 
           START_DATE as startDate, 
@@ -34,37 +33,30 @@ public class ProductsRepositoryImpl implements ProductsRepository {
           PRICE as price, 
           CURR as currency
       FROM PRICES 
-      WHERE 1 = 1""";
+      WHERE PRODUCT_ID = :productId
+      AND BRAND_ID = :brandId
+      AND :applicationDate BETWEEN START_DATE AND END_DATE
+      ORDER BY PRIORITY DESC LIMIT 1
+      """;
 
   @Override
-  public List<ProductDto> getProductsByFilter(ProductFilterDto productFilterDto) throws DbException.BadExecution {
+  public ProductDto getHighestPriorityProductByFilters(ProductFilterDto productFilterDto)
+      throws DbException.BadExecution, DbException.NoData {
 
     try {
-
-      StringBuilder clauses = new StringBuilder();
-      if (productFilterDto.getProductId() != null) {
-        clauses.append(" AND PRODUCT_ID = :productId ");
-      }
-
-      if (productFilterDto.getBrandId() != null) {
-        clauses.append(" AND BRAND_ID = :brandId ");
-      }
-
-      if (productFilterDto.getApplicationDate() != null) {
-        clauses.append(" AND :applicationDate BETWEEN START_DATE AND END_DATE ");
-      }
 
       MapSqlParameterSource namedParameters = new MapSqlParameterSource();
       namedParameters.addValue("productId", productFilterDto.getProductId());
       namedParameters.addValue("brandId", productFilterDto.getBrandId());
       namedParameters.addValue("applicationDate", productFilterDto.getApplicationDate());
 
-      String query = MessageFormat.format("{0} {1}", QUERY_SELECT_TOP_REFERENCE_MAIN, clauses.toString());
-      List<ProductEntity> productsEntity = namedParameterJdbcTemplate.query(query, namedParameters,
-          new ProductsRowMapper());
+      ProductEntity productsEntity = namedParameterJdbcTemplate
+          .queryForObject(QUERY_SELECT_HIGHEST_PRIORITY_PRODUCT_BY_FILTERS, namedParameters, new ProductsRowMapper());
 
       return productsSecMapper.toProductDto(productsEntity);
 
+    } catch (EmptyResultDataAccessException e) {
+      throw new DbException.NoData(e.getMessage());
     } catch (Exception e) {
       throw new DbException.BadExecution(e.getMessage());
     }

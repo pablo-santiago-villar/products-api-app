@@ -2,15 +2,13 @@ package com.products.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.products.application.mapper.ProductsMapper;
-import com.products.application.model.co.ProductCo;
-import com.products.application.model.co.ProductsCo;
+import com.products.application.exceptions.DbException;
 import com.products.application.model.dto.ProductDto;
 import com.products.application.model.dto.ProductFilterDto;
 import com.products.application.ports.secondary.ProductsRepository;
@@ -32,9 +30,6 @@ class ProductsUseCaseImplTest {
   @Mock
   private ProductsRepository productsRepository;
 
-  @Mock
-  private ProductsMapper productsMapper;
-
   @InjectMocks
   private ProductsUseCaseImpl productsUseCaseImpl;
 
@@ -51,19 +46,10 @@ class ProductsUseCaseImplTest {
   void test1_getProductByFilter_ShouldReturnProductWithLowestPriority() throws Exception {
     // Arrange
     List<ProductDto> mockProducts = ProductDtoMocks.getTest1MockProducts();
-    ProductCo expectedProductCo = new ProductCo();
-    expectedProductCo.setBrandId(1);
-    expectedProductCo.setProductId(35455);
-    expectedProductCo.setPriceList(1);
-    expectedProductCo.setPrice(new BigDecimal("35.50"));
-    expectedProductCo.setPriority(0);
+    ProductDto expectedDto = mockProducts.get(0);
 
-    when(productsRepository.getProductsByFilter(any(ProductFilterDto.class)))
-        .thenReturn(mockProducts);
-    when(productsMapper.toProductsCo(mockProducts))
-        .thenReturn(new ProductsCo(List.of(expectedProductCo)));
-    when(productsMapper.toProductDto(expectedProductCo))
-        .thenReturn(mockProducts.get(0));
+    when(productsRepository.getHighestPriorityProductByFilters(any(ProductFilterDto.class)))
+        .thenReturn(expectedDto);
 
     // Act
     ProductDto result = productsUseCaseImpl.getProductByFilter(filterDto);
@@ -74,7 +60,7 @@ class ProductsUseCaseImplTest {
     assertEquals(1, result.getPriceList());
     assertEquals(new BigDecimal("35.50"), result.getPrice());
     assertEquals(0, result.getPriority());
-    verify(productsRepository, times(1)).getProductsByFilter(any(ProductFilterDto.class));
+    verify(productsRepository, times(1)).getHighestPriorityProductByFilters(any(ProductFilterDto.class));
   }
 
   @DisplayName("Test 2: Debe retornar producto con mayor prioridad a las 16:00 del día 14")
@@ -85,24 +71,10 @@ class ProductsUseCaseImplTest {
         LocalDateTime.of(2020, 6, 14, 16, 0));
 
     List<ProductDto> mockProducts = ProductDtoMocks.getTest2MockProducts();
+    ProductDto expectedDto = mockProducts.get(1);
 
-    ProductCo expectedProductCo = new ProductCo();
-    expectedProductCo.setBrandId(1);
-    expectedProductCo.setProductId(35455);
-    expectedProductCo.setPriceList(2);
-    expectedProductCo.setPrice(new BigDecimal("25.45"));
-    expectedProductCo.setPriority(1);
-
-    when(productsRepository.getProductsByFilter(any(ProductFilterDto.class)))
-        .thenReturn(mockProducts);
-    when(productsMapper.toProductsCo(mockProducts))
-        .thenReturn(new ProductsCo(List.of(
-            new ProductCo(1, LocalDateTime.of(2020, 6, 14, 0, 0), LocalDateTime.of(2020, 12, 31, 23, 59, 59), 1, 35455,
-                0, new BigDecimal("35.50"), "EUR"),
-            expectedProductCo
-        )));
-    when(productsMapper.toProductDto(expectedProductCo))
-        .thenReturn(mockProducts.get(1));
+    when(productsRepository.getHighestPriorityProductByFilters(any(ProductFilterDto.class)))
+        .thenReturn(expectedDto);
 
     // Act
     ProductDto result = productsUseCaseImpl.getProductByFilter(test2Filter);
@@ -113,24 +85,21 @@ class ProductsUseCaseImplTest {
     assertEquals(2, result.getPriceList());
     assertEquals(new BigDecimal("25.45"), result.getPrice());
     assertEquals(1, result.getPriority());
-    verify(productsRepository, times(1)).getProductsByFilter(any(ProductFilterDto.class));
+    verify(productsRepository, times(1)).getHighestPriorityProductByFilters(any(ProductFilterDto.class));
   }
 
-  @DisplayName("Test 3: Debe retornar null cuando no hay productos")
+  @DisplayName("Test 3: Debe lanzar NoData cuando no hay productos")
   @Test
-  void test3_getProductByFilter_ShouldReturnNullWhenNoProducts() throws Exception {
+  void test3_getProductByFilter_ShouldThrowNoDataWhenNoProducts() throws Exception {
     // Arrange
-    when(productsRepository.getProductsByFilter(any(ProductFilterDto.class)))
-        .thenReturn(List.of());
-    when(productsMapper.toProductsCo(List.of()))
-        .thenReturn(new ProductsCo(List.of()));
+    when(productsRepository.getHighestPriorityProductByFilters(any(ProductFilterDto.class)))
+        .thenThrow(new DbException.NoData("No se encontró producto con los filtros especificados"));
 
-    // Act
-    ProductDto result = productsUseCaseImpl.getProductByFilter(filterDto);
-
-    // Assert
-    assertNull(result);
-    verify(productsRepository, times(1)).getProductsByFilter(any(ProductFilterDto.class));
+    // Act & Assert
+    assertThrows(DbException.NoData.class, () -> {
+      productsUseCaseImpl.getProductByFilter(filterDto);
+    });
+    verify(productsRepository, times(1)).getHighestPriorityProductByFilters(any(ProductFilterDto.class));
   }
 
   @DisplayName("Test 4: Debe llamar al repositorio con el filtro correcto")
@@ -138,21 +107,16 @@ class ProductsUseCaseImplTest {
   void test4_getProductByFilter_ShouldCallRepositoryWithCorrectFilter() throws Exception {
     // Arrange
     List<ProductDto> mockProducts = ProductDtoMocks.getTest1MockProducts();
-    ProductCo expectedProductCo = new ProductCo();
-    expectedProductCo.setPriority(0);
+    ProductDto expectedDto = mockProducts.get(0);
 
-    when(productsRepository.getProductsByFilter(any(ProductFilterDto.class)))
-        .thenReturn(mockProducts);
-    when(productsMapper.toProductsCo(mockProducts))
-        .thenReturn(new ProductsCo(List.of(expectedProductCo)));
-    when(productsMapper.toProductDto(expectedProductCo))
-        .thenReturn(mockProducts.get(0));
+    when(productsRepository.getHighestPriorityProductByFilters(any(ProductFilterDto.class)))
+        .thenReturn(expectedDto);
 
     // Act
     productsUseCaseImpl.getProductByFilter(filterDto);
 
     // Assert
-    verify(productsRepository, times(1)).getProductsByFilter(filterDto);
+    verify(productsRepository, times(1)).getHighestPriorityProductByFilters(filterDto);
   }
 
 }

@@ -6,6 +6,6 @@ import com.products.application.model.dto.ProductFilterDto;
 
 public interface ProductsUseCase {
 
-  ProductDto getProductByFilter(ProductFilterDto productFilterDto) throws DbException.BadExecution;
+  ProductDto getProductByFilter(ProductFilterDto productFilterDto) throws DbException.BadExecution, DbException.NoData;
 
 }

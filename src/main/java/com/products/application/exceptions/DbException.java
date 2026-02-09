@@ -15,4 +15,15 @@ public class DbException {
 
   }
 
+  public static class NoData extends Exception {
+
+    @Serial
+    private static final long serialVersionUID = 960850727716258181L;
+
+    public NoData(String msg) {
+      super(msg);
+    }
+
+  }
+
 }
