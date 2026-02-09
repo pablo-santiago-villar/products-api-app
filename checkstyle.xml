@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<module name="Checker">
+  <property name="severity" value="warning"/>
+  <property name="fileExtensions" value="java"/>
+
+  <!-- Excluir archivos generados -->
+  <module name="BeforeExecutionExclusionFileFilter">
+    <property name="fileNamePattern" value=".*[\\/]target[\\/].*"/>
+  </module>
+
+  <!-- Longitud máxima de línea -->
+  <module name="LineLength">
+    <property name="max" value="120"/>
+    <property name="ignorePattern" value="^package.*|^import.*|href|http://|https://"/>
+  </module>
+
+  <!-- No tabs, solo espacios -->
+  <module name="FileTabCharacter"/>
+
+  <!-- Archivo debe terminar con nueva línea -->
+  <module name="NewlineAtEndOfFile"/>
+
+  <module name="TreeWalker">
+    <!-- Nombres de clases en PascalCase -->
+    <module name="TypeName"/>
+
+    <!-- Nombres de métodos en camelCase (permite guiones bajos para tests) -->
+    <module name="MethodName">
+      <property name="format" value="^[a-z][a-zA-Z0-9_]*$"/>
+    </module>
+
+    <!-- Variables locales en camelCase -->
+    <module name="LocalVariableName"/>
+
+    <!-- Atributos de clase en camelCase -->
+    <module name="MemberName"/>
+
+    <!-- Parámetros en camelCase -->
+    <module name="ParameterName"/>
+
+    <!-- Constantes en UPPER_SNAKE_CASE -->
+    <module name="ConstantName"/>
+
+    <!-- Imports -->
+    <module name="AvoidStarImport"/>
+    <module name="UnusedImports"/>
+    <module name="RedundantImport"/>
+
+    <!-- Espacios en blanco -->
+    <module name="WhitespaceAfter"/>
+    <module name="WhitespaceAround">
+      <property name="allowEmptyConstructors" value="true"/>
+      <property name="allowEmptyMethods" value="true"/>
+      <property name="allowEmptyTypes" value="true"/>
+      <property name="allowEmptyLambdas" value="true"/>
+    </module>
+    <module name="NoWhitespaceBefore"/>
+    <module name="GenericWhitespace"/>
+
+    <!-- Llaves -->
+    <module name="LeftCurly"/>
+    <module name="RightCurly"/>
+    <module name="NeedBraces"/>
+
+    <!-- Bloques vacíos -->
+    <module name="EmptyBlock">
+      <property name="option" value="TEXT"/>
+    </module>
+
+    <!-- Modificadores en orden correcto -->
+    <module name="ModifierOrder"/>
+
+    <!-- Evitar código muerto -->
+    <module name="EmptyStatement"/>
+
+    <!-- Equals y hashCode -->
+    <module name="EqualsHashCode"/>
+
+    <!-- Ocultar campos -->
+    <module name="HiddenField">
+      <property name="ignoreConstructorParameter" value="true"/>
+      <property name="ignoreSetter" value="true"/>
+    </module>
+
+    <!-- Una declaración por línea -->
+    <module name="MultipleVariableDeclarations"/>
+
+    <!-- Array style -->
+    <module name="ArrayTypeStyle"/>
+
+    <!-- Suprimir warnings con anotación -->
+    <module name="SuppressWarningsHolder"/>
+  </module>
+
+  <module name="SuppressWarningsFilter"/>
+</module>
